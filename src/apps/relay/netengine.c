@@ -445,47 +445,50 @@ void send_auth_message_to_auth_server(struct auth_message *am)
 	}
 }
 
-int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8_t *usname, uint8_t *realm, hmackey_t key, ioa_network_buffer_handle nbh) {
+int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8_t *usname, uint8_t *realm, hmackey_t key, ioa_network_buffer_handle nbh)
+{
 
-    FILE *out = popen("./examples/scripts/get_user_key.sh 1 0 4200 vehicle1 myrealm", "r");
-    if (out != NULL) {
-        char buf[4096] = {0};
-        size_t read = fread(buf, 4096, 1, out);
-        printf("%zu\n", read);
-        printf("> %s\n", buf);
-		int ec = WEXITSTATUS(pclose(out));
-		printf("exit code %d\n", ec);
-		if (ec != 0)
-			return ec;
+	char command[1024] = {0};
+	snprintf(command, 1024, "./examples/scripts/get_user_key.sh %d %d %d '%s' '%s'", in_oauth, *out_oauth, *max_session_time, usname, realm);
 
-        char *token;
-        char *rest = buf;
-
-        while ((token = strtok_r(rest, "\n", &rest))) {
-            printf("'%s'\n", token);
-            char *x = strstr(token, ": ");
-            if (x != NULL) {
-                size_t keylen = x - token;
-                size_t valuelen = strlen(token) - 2 - keylen;
-                char key[32] = {0};
-                char value[128] = {0};
-                snprintf(key, keylen + 1, "%s", token);
-                snprintf(value, valuelen + 1, "%s", token + keylen + 2);
-                printf("'%s' -> '%s'\n", key, value);
-				if (!strncmp(key, "out_oauth", 32)) {
-					*out_oauth = atoi(value);
-				} else if (!strncmp(key, "key", 128)) {
-					bcopy(value,key,strlen(value));
-				} else if (!strncmp(key, "max_session_time")) {
-					*max_session_time = atoi(value);
-				}
-            }
-        }
+	FILE *out = popen(command, "r");
+	if (out == NULL)
+		return -1;
+	char buf[4096] = {0};
+	size_t read = fread(buf, 4096, 1, out);
+	printf("%zu\n", read);
+	printf("> %s\n", buf);
+	int ec = WEXITSTATUS(pclose(out));
+	printf("exit code %d\n", ec);
+	if (ec != 0)
 		return ec;
-    }
-	return -1;
-}
 
+	char *token;
+	char *rest = buf;
+
+	while ((token = strtok_r(rest, "\n", &rest)))
+	{
+		printf("'%s'\n", token);
+		char *x = strstr(token, ": ");
+		if (x != NULL)
+		{
+			size_t keylen = x - token;
+			size_t valuelen = strlen(token) - 2 - keylen;
+			char key[32] = {0};
+			char value[128] = {0};
+			snprintf(key, keylen + 1, "%s", token);
+			snprintf(value, valuelen + 1, "%s", token + keylen + 2);
+			printf("'%s' -> '%s'\n", key, value);
+			if (!strncmp(key, "out_oauth", 32))
+				*out_oauth = atoi(value);
+			else if (!strncmp(key, "key", 128))
+				bcopy(value, key, strlen(value));
+			else if (!strncmp(key, "max_session_time"))
+				*max_session_time = atoi(value);
+		}
+	}
+	return ec;
+}
 
 static void auth_server_receive_message(struct bufferevent *bev, void *ptr)
 {
