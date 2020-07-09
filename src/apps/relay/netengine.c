@@ -447,7 +447,7 @@ void send_auth_message_to_auth_server(struct auth_message *am)
 
 int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8_t *usname, uint8_t *realm, hmackey_t key, ioa_network_buffer_handle nbh) {
 
-    FILE *out = popen("/home/alex.zhukov/sandboxc/myscript.sh 1 0 4200 vehicle1 myrealm", "r");
+    FILE *out = popen("./examples/scripts/get_user_key.sh 1 0 4200 vehicle1 myrealm", "r");
     if (out != NULL) {
         char buf[4096] = {0};
         size_t read = fread(buf, 4096, 1, out);
