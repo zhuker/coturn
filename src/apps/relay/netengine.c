@@ -481,9 +481,9 @@ int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8
 			printf("'%s' -> '%s'\n", key, value);
 			if (!strncmp(key, "out_oauth", 32))
 				*out_oauth = atoi(value);
-			else if (!strncmp(key, "key", 128))
-				bcopy(value, key, strlen(value));
-			else if (!strncmp(key, "max_session_time"))
+			else if (!strncmp(key, "key", 32))
+				bcopy(value, key, MIN(strlen(value), sizeof(hmackey_t)));
+			else if (!strncmp(key, "max_session_time", 32))
 				*max_session_time = atoi(value);
 		}
 	}
