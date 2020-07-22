@@ -449,7 +449,7 @@ int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8
 {
 
 	char command[1024] = {0};
-	snprintf(command, 1024, "./examples/scripts/get_user_key.sh %d %d %d '%s' '%s'", in_oauth, *out_oauth, *max_session_time, usname, realm);
+	snprintf(command, 1024, "/opt/coturn/scripts/get_user_key.sh %d %d %d '%s' '%s'", in_oauth, *out_oauth, *max_session_time, usname, realm);
 
 	FILE *out = popen(command, "r");
 	if (out == NULL)
