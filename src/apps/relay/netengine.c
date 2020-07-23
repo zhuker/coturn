@@ -445,7 +445,7 @@ void send_auth_message_to_auth_server(struct auth_message *am)
 	}
 }
 
-int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8_t *usname, uint8_t *realm, hmackey_t key, ioa_network_buffer_handle nbh)
+int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8_t *usname, uint8_t *realm, hmackey_t out_key, ioa_network_buffer_handle nbh)
 {
 
 	char command[1024] = {0};
@@ -485,7 +485,7 @@ int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8
 				*max_session_time = atoi(value);
 			else if (!strncmp(key, "key", 32)) {
 				size_t sz = MIN(strlen(value), sizeof(hmackey_t));
-				if(convert_string_key_to_binary(value, key, sz / 2) < 0) {
+				if(convert_string_key_to_binary(value, out_key, sz / 2) < 0) {
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "Wrong key: '%s', user '%s'\n", value, usname);
 					return -1;
 				}
