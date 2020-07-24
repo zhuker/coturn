@@ -445,6 +445,56 @@ void send_auth_message_to_auth_server(struct auth_message *am)
 	}
 }
 
+int hack_get_user_key(int in_oauth, int *out_oauth, int *max_session_time, uint8_t *usname, uint8_t *realm, hmackey_t out_key, ioa_network_buffer_handle nbh)
+{
+
+	char command[1024] = {0};
+	snprintf(command, 1024, "/opt/coturn/scripts/get_user_key %d %d %d '%s' '%s'", in_oauth, *out_oauth, *max_session_time, usname, realm);
+
+	FILE *out = popen(command, "r");
+	if (out == NULL)
+		return -1;
+	char buf[4096] = {0};
+	size_t read = fread(buf, 4096, 1, out);
+	printf("%zu\n", read);
+	printf("> %s\n", buf);
+	int ec = WEXITSTATUS(pclose(out));
+	printf("exit code %d\n", ec);
+	if (ec != 0)
+		return ec;
+
+	char *token;
+	char *rest = buf;
+
+	while ((token = strtok_r(rest, "\n", &rest)))
+	{
+		printf("'%s'\n", token);
+		char *x = strstr(token, ": ");
+		if (x != NULL)
+		{
+			size_t keylen = x - token;
+			size_t valuelen = strlen(token) - 2 - keylen;
+			char key[32] = {0};
+			char value[128 + 1] = {0};
+			snprintf(key, keylen + 1, "%s", token);
+			snprintf(value, valuelen + 1, "%s", token + keylen + 2);
+			printf("'%s' -> '%s'\n", key, value);
+			if (!strncmp(key, "out_oauth", 32))
+				*out_oauth = atoi(value);
+			else if (!strncmp(key, "max_session_time", 32))
+				*max_session_time = atoi(value);
+			else if (!strncmp(key, "key", 32)) {
+				size_t sz = MIN(strlen(value), sizeof(hmackey_t));
+				if(convert_string_key_to_binary(value, out_key, sz / 2) < 0) {
+					TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "Wrong key: '%s', user '%s'\n", value, usname);
+					return -1;
+				}
+			} 
+		}
+	}
+	return ec;
+}
+
 static void auth_server_receive_message(struct bufferevent *bev, void *ptr)
 {
   UNUSED_ARG(ptr);
@@ -461,7 +511,7 @@ static void auth_server_receive_message(struct bufferevent *bev, void *ptr)
     
     {
       hmackey_t key;
-      if(get_user_key(am.in_oauth,&(am.out_oauth),&(am.max_session_time),am.username,am.realm,key,am.in_buffer.nbh)<0) {
+      if(hack_get_user_key(am.in_oauth,&(am.out_oauth),&(am.max_session_time),am.username,am.realm,key,am.in_buffer.nbh)<0) {
     	  am.success = 0;
       } else {
     	  bcopy(key,am.key,sizeof(hmackey_t));
